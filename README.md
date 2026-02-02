@@ -4,9 +4,10 @@ Compara sua watchlist do Letterboxd com listas públicas para encontrar filmes e
 
 ## Funcionalidades
 
-- Lê sua watchlist exportada do Letterboxd (arquivo CSV)
-- Extrai filmes de listas públicas do Letterboxd via web scraping
-- Identifica e exibe os filmes em comum entre sua watchlist e as listas online
+- Identifica filmes em comum entre sua watchlist e listas públicas do Letterboxd
+- Dois modos de leitura da watchlist:
+  - **Via CSV**: usando arquivo exportado do Letterboxd
+  - **Via URL**: lendo diretamente da sua página de watchlist
 
 ## Requisitos
 
@@ -30,18 +31,30 @@ pip install pandas beautifulsoup4 cloudscraper
 
 ## Como usar
 
+### Opção 1: Leitura via CSV (`script_csv.py`)
+
 1. Exporte sua watchlist do Letterboxd:
-   - Acesse [letterboxd.com/settings/data](https://letterboxd.com/settings/data/)
-   - Clique em "Export your data"
-   - Extraia o arquivo `watchlist.csv`
+   - Acesse sua watchlist (ex: `https://letterboxd.com/seu_usuario/watchlist/`)
+   - Clique em "Export watchlist" para baixar o CSV
 
-2. Edite o arquivo `script.py` com suas configurações:
+2. Edite `script_csv.py`:
    - Atualize `meu_arquivo` com o nome do seu CSV
-   - Adicione as URLs das listas que deseja comparar em `urls_para_analisar`
+   - Adicione as URLs das listas em `urls_para_analisar`
 
-3. Execute o script:
+3. Execute:
 ```bash
-python script.py
+python script_csv.py
+```
+
+### Opção 2: Leitura via URL (`script_url.py`)
+
+1. Edite `script_url.py`:
+   - Atualize `minha_watchlist` com a URL da sua watchlist (ex: `https://letterboxd.com/seu_usuario/watchlist/`)
+   - Adicione as URLs das listas em `urls_para_analisar`
+
+2. Execute:
+```bash
+python script_url.py
 ```
 
 ## Exemplo de saída
@@ -54,12 +67,11 @@ Processando lista: https://letterboxd.com/usuario/list/nome-da-lista/
 Total de filmes extraídos da lista: 357
 
 === Filmes encontrados em comum ===
-                    Name_sua   Year
-          My Name Ain't Johnny 2008.0
-              Neighboring Sounds 2012.0
-                      Marighella 2019.0
+          My Name Ain't Johnny
+              Neighboring Sounds
+                      Marighella
 
-Total de correspondências: 3
+Total de correspondências: 27
 ```
 
 ## Licença
