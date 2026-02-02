@@ -31,12 +31,13 @@ def fetch_letterboxd_list_from_csv(csv_file):
         return pd.DataFrame()
 
 
-def fetch_letterboxd_list_from_url(base_url):
+def fetch_letterboxd_list_from_url(base_url, max_retries=3):
     """
     Extrai filmes de uma lista do Letterboxd via web scraping.
     
     Args:
         base_url: URL da lista do Letterboxd
+        max_retries: Número máximo de tentativas por página
         
     Returns:
         DataFrame com os filmes da lista
@@ -49,44 +50,76 @@ def fetch_letterboxd_list_from_url(base_url):
         base_url = base_url.rstrip('/') + '/detail/'
     
     # Usar cloudscraper para contornar proteção anti-bot
-    scraper = cloudscraper.create_scraper()
+    scraper = cloudscraper.create_scraper(
+        browser={
+            'browser': 'chrome',
+            'platform': 'windows',
+            'desktop': True
+        }
+    )
 
     while True:
         url = f"{base_url}page/{page}/"
         print(f"Acessando: {url}...")
         
-        try:
-            response = scraper.get(url)
-            if response.status_code != 200:
-                print(f"Erro: Status {response.status_code}")
-                break
+        success = False
+        for attempt in range(max_retries):
+            try:
+                # Delay antes de cada requisição
+                if attempt > 0:
+                    wait_time = 2 ** attempt  # Exponential backoff: 2, 4, 8 segundos
+                    print(f"  Tentativa {attempt + 1}/{max_retries}, aguardando {wait_time}s...")
+                    time.sleep(wait_time)
                 
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Encontrar todos os h2 com links (títulos dos filmes)
-            found_movies = False
-            for h2 in soup.find_all('h2'):
-                a = h2.find('a')
-                if a and '/film/' in a.get('href', ''):
-                    title = a.text.strip()
-                    if title:
-                        movies.append({'Name': title})
-                        found_movies = True
-            
-            if not found_movies:
-                break
-            
-            print(f"  Filmes encontrados nesta página: {len([h2 for h2 in soup.find_all('h2') if h2.find('a') and '/film/' in h2.find('a').get('href', '')])}")
+                response = scraper.get(url)
                 
-            # Verificar se há próxima página
-            if not soup.find('a', class_='next'):
-                break
-                
-            page += 1
-            time.sleep(1)
-        except Exception as e:
-            print(f"Erro na página {page}: {e}")
+                if response.status_code == 200:
+                    success = True
+                    break
+                elif response.status_code == 403:
+                    print(f"  Bloqueado (403), tentando novamente...")
+                    # Recriar o scraper para nova sessão
+                    scraper = cloudscraper.create_scraper(
+                        browser={
+                            'browser': 'chrome',
+                            'platform': 'windows',
+                            'desktop': True
+                        }
+                    )
+                else:
+                    print(f"  Erro: Status {response.status_code}")
+                    break
+                    
+            except Exception as e:
+                print(f"  Erro na tentativa {attempt + 1}: {e}")
+        
+        if not success:
+            print(f"  Falha ao acessar página {page} após {max_retries} tentativas")
             break
+            
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Encontrar todos os h2 com links (títulos dos filmes)
+        page_movies = []
+        for h2 in soup.find_all('h2'):
+            a = h2.find('a')
+            if a and '/film/' in a.get('href', ''):
+                title = a.text.strip()
+                if title:
+                    page_movies.append({'Name': title})
+        
+        if not page_movies:
+            break
+        
+        movies.extend(page_movies)
+        print(f"  Filmes encontrados nesta página: {len(page_movies)}")
+            
+        # Verificar se há próxima página
+        if not soup.find('a', class_='next'):
+            break
+            
+        page += 1
+        time.sleep(2)  # Delay maior entre páginas
     
     print(f"Total de filmes extraídos da lista: {len(movies)}")
     return pd.DataFrame(movies)
