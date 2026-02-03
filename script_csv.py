@@ -5,12 +5,13 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 
-def fetch_letterboxd_list_from_csv(csv_file):
+def fetch_letterboxd_list_from_csv(csv_file, list_name=None):
     """
     Lê uma lista de filmes a partir de um arquivo CSV.
     
     Args:
         csv_file: Caminho para o arquivo CSV
+        list_name: Nome identificador da lista (para rastrear origem)
         
     Returns:
         DataFrame com os filmes da lista
@@ -24,6 +25,9 @@ def fetch_letterboxd_list_from_csv(csv_file):
             print(f"Colunas encontradas: {df.columns.tolist()}")
             raise ValueError("A coluna 'Name' não foi encontrada no CSV.")
         
+        # Adicionar coluna Source
+        df['Source'] = list_name or 'CSV Local'
+        
         print(f"Total de filmes encontrados: {len(df)}")
         return df
     except Exception as e:
@@ -31,13 +35,14 @@ def fetch_letterboxd_list_from_csv(csv_file):
         return pd.DataFrame()
 
 
-def fetch_letterboxd_list_from_url(base_url, max_retries=3):
+def fetch_letterboxd_list_from_url(base_url, max_retries=3, list_name=None):
     """
     Extrai filmes de uma lista do Letterboxd via web scraping.
     
     Args:
         base_url: URL da lista do Letterboxd
         max_retries: Número máximo de tentativas por página
+        list_name: Nome identificador da lista (para rastrear origem)
         
     Returns:
         DataFrame com os filmes da lista
@@ -106,7 +111,7 @@ def fetch_letterboxd_list_from_url(base_url, max_retries=3):
             if a and '/film/' in a.get('href', ''):
                 title = a.text.strip()
                 if title:
-                    page_movies.append({'Name': title})
+                    page_movies.append({'Name': title, 'Source': list_name or 'Lista Online'})
         
         if not page_movies:
             break
@@ -131,13 +136,13 @@ def comparar_listas(csv_file, urls):
     
     Args:
         csv_file: Caminho para o arquivo CSV com sua watchlist
-        urls: Lista de URLs do Letterboxd para comparar
+        urls: Lista de dicts com 'url' e 'nome' para comparar
         
     Returns:
-        DataFrame com os filmes em comum
+        DataFrame com os filmes em comum e suas origens
     """
     print("Carregando sua watchlist...")
-    df_watchlist = fetch_letterboxd_list_from_csv(csv_file)
+    df_watchlist = fetch_letterboxd_list_from_csv(csv_file, list_name="Seu CSV")
     
     if df_watchlist.empty:
         print("Erro ao carregar a watchlist.")
@@ -146,9 +151,11 @@ def comparar_listas(csv_file, urls):
     df_watchlist['match_name'] = df_watchlist['Name'].astype(str).str.lower().str.strip()
 
     all_external_movies = []
-    for url in urls:
-        print(f"\nProcessando lista: {url}")
-        df_list = fetch_letterboxd_list_from_url(url)
+    for url_info in urls:
+        url = url_info['url'] if isinstance(url_info, dict) else url_info
+        list_name = url_info['nome'] if isinstance(url_info, dict) else url.split('/')[-3]
+        print(f"\nProcessando lista: {list_name}")
+        df_list = fetch_letterboxd_list_from_url(url, list_name=list_name)
         if not df_list.empty:
             all_external_movies.append(df_list)
     
@@ -156,19 +163,26 @@ def comparar_listas(csv_file, urls):
         print("Nenhum filme extraído das listas online.")
         return pd.DataFrame()
 
-    df_external = pd.concat(all_external_movies).drop_duplicates()
+    df_external = pd.concat(all_external_movies, ignore_index=True)
     df_external['match_name'] = df_external['Name'].astype(str).str.lower().str.strip()
 
+    # Agrupar as origens por filme
+    df_external_grouped = df_external.groupby('match_name').agg({
+        'Name': 'first',
+        'Source': lambda x: ', '.join(x.unique())
+    }).reset_index()
+
     # Cruzamento
-    matches = pd.merge(df_watchlist, df_external, on='match_name', suffixes=('_sua', '_lista'))
+    matches = pd.merge(df_watchlist[['Name', 'match_name']], df_external_grouped, on='match_name', suffixes=('_sua', '_lista'))
+    matches = matches.rename(columns={'Name_sua': 'Watchlist', 'Source': 'Em quais acervos'})
     
     return matches
 
 
 # --- EXECUÇÃO ---
 urls_para_analisar = [
-    "https://letterboxd.com/cinemabrocado/list/acervo-cinema-brocado/detail/",
-    "https://letterboxd.com/manel12/list/catalogo-nicho/detail/"
+    {'url': "https://letterboxd.com/cinemabrocado/list/acervo-cinema-brocado/", 'nome': "Acervo Cinema Brocado"},
+    {'url': "https://letterboxd.com/manel12/list/catalogo-nicho/", 'nome': "Catálogo Nicho"}
 ]
 
 meu_arquivo = 'watchlist-guiinow-2026-02-02-22-14-utc.csv'
@@ -178,9 +192,7 @@ try:
 
     if not resultados.empty:
         print("\n=== Filmes encontrados em comum ===")
-        # Mostra o nome original da sua watchlist e o ano (se existir no seu CSV)
-        colunas_exibir = ['Name_sua']
-        if 'Year' in resultados.columns: colunas_exibir.append('Year')
+        colunas_exibir = ['Watchlist', 'Em quais acervos']
         
         print(resultados[colunas_exibir].drop_duplicates().to_string(index=False))
         print(f"\nTotal de correspondências: {len(resultados.drop_duplicates(subset=['match_name']))}")

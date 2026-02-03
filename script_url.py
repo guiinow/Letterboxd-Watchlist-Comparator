@@ -5,7 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 
-def fetch_letterboxd_list_from_url(base_url, max_retries=3, is_watchlist=False):
+def fetch_letterboxd_list_from_url(base_url, max_retries=3, is_watchlist=False, list_name=None):
     """
     Extrai filmes de uma lista ou watchlist do Letterboxd via web scraping.
     
@@ -13,6 +13,7 @@ def fetch_letterboxd_list_from_url(base_url, max_retries=3, is_watchlist=False):
         base_url: URL da lista do Letterboxd
         max_retries: Número máximo de tentativas por página
         is_watchlist: Se True, usa parser para watchlist (sem /detail/)
+        list_name: Nome identificador da lista (para rastrear origem)
         
     Returns:
         DataFrame com os filmes da lista
@@ -85,7 +86,7 @@ def fetch_letterboxd_list_from_url(base_url, max_retries=3, is_watchlist=False):
                 if img and img.get('alt'):
                     title = img.get('alt').strip()
                     if title:
-                        page_movies.append({'Name': title})
+                        page_movies.append({'Name': title, 'Source': list_name or 'Watchlist'})
         else:
             # Listas com /detail/: títulos estão em h2 > a
             for h2 in soup.find_all('h2'):
@@ -93,7 +94,7 @@ def fetch_letterboxd_list_from_url(base_url, max_retries=3, is_watchlist=False):
                 if a and '/film/' in a.get('href', ''):
                     title = a.text.strip()
                     if title:
-                        page_movies.append({'Name': title})
+                        page_movies.append({'Name': title, 'Source': list_name or 'Lista'})
         
         if not page_movies:
             break
@@ -118,13 +119,13 @@ def comparar_listas(watchlist_url, urls):
     
     Args:
         watchlist_url: URL da sua watchlist no Letterboxd
-        urls: Lista de URLs do Letterboxd para comparar
+        urls: Lista de dicts com 'url' e 'nome' para comparar
         
     Returns:
-        DataFrame com os filmes em comum
+        DataFrame com os filmes em comum e suas origens
     """
     print("Carregando sua watchlist...")
-    df_watchlist = fetch_letterboxd_list_from_url(watchlist_url, is_watchlist=True)
+    df_watchlist = fetch_letterboxd_list_from_url(watchlist_url, is_watchlist=True, list_name="Sua Watchlist")
     
     if df_watchlist.empty:
         print("Erro ao carregar a watchlist.")
@@ -133,9 +134,11 @@ def comparar_listas(watchlist_url, urls):
     df_watchlist['match_name'] = df_watchlist['Name'].astype(str).str.lower().str.strip()
 
     all_external_movies = []
-    for url in urls:
-        print(f"\nProcessando lista: {url}")
-        df_list = fetch_letterboxd_list_from_url(url)
+    for url_info in urls:
+        url = url_info['url'] if isinstance(url_info, dict) else url_info
+        list_name = url_info['nome'] if isinstance(url_info, dict) else url.split('/')[-2]
+        print(f"\nProcessando lista: {list_name}")
+        df_list = fetch_letterboxd_list_from_url(url, list_name=list_name)
         if not df_list.empty:
             all_external_movies.append(df_list)
     
@@ -143,11 +146,18 @@ def comparar_listas(watchlist_url, urls):
         print("Nenhum filme extraído das listas online.")
         return pd.DataFrame()
 
-    df_external = pd.concat(all_external_movies).drop_duplicates()
+    df_external = pd.concat(all_external_movies, ignore_index=True)
     df_external['match_name'] = df_external['Name'].astype(str).str.lower().str.strip()
 
+    # Agrupar as origens por filme
+    df_external_grouped = df_external.groupby('match_name').agg({
+        'Name': 'first',
+        'Source': lambda x: ', '.join(x.unique())
+    }).reset_index()
+
     # Cruzamento
-    matches = pd.merge(df_watchlist, df_external, on='match_name', suffixes=('_sua', '_lista'))
+    matches = pd.merge(df_watchlist[['Name', 'match_name']], df_external_grouped, on='match_name', suffixes=('_sua', '_lista'))
+    matches = matches.rename(columns={'Source': 'Em quais listas'})
     
     return matches
 
@@ -158,8 +168,8 @@ minha_watchlist = "https://letterboxd.com/guiinow/watchlist/"
 
 # Listas para comparar
 urls_para_analisar = [
-    "https://letterboxd.com/cinemabrocado/list/acervo-cinema-brocado/",
-    "https://letterboxd.com/manel12/list/catalogo-nicho/"
+    {'url': "https://letterboxd.com/cinemabrocado/list/acervo-cinema-brocado/", 'nome': "Acervo Cinema Brocado"},
+    {'url': "https://letterboxd.com/manel12/list/catalogo-nicho/", 'nome': "Catálogo Nicho"}
 ]
 
 try:
@@ -167,7 +177,7 @@ try:
 
     if not resultados.empty:
         print("\n=== Filmes encontrados em comum ===")
-        colunas_exibir = ['Name_sua']
+        colunas_exibir = ['Watchlist', 'Em quais acervos']
         
         print(resultados[colunas_exibir].drop_duplicates().to_string(index=False))
         print(f"\nTotal de correspondências: {len(resultados.drop_duplicates(subset=['match_name']))}")
