@@ -67,9 +67,12 @@ Processando lista: https://letterboxd.com/usuario/list/nome-da-lista/
 Total de filmes extraídos da lista: 357
 
 === Filmes encontrados em comum ===
-          My Name Ain't Johnny
-              Neighboring Sounds
-                      Marighella
+                                                 Watchlist                      Em quais acervos
+                                                 Fireworks                 Acervo Cinema Brocado
+                                              Mango Yellow Acervo Cinema Brocado, Catálogo Nicho
+I Travel Because I Have to, I Come Back Because I Love You Acervo Cinema Brocado, Catálogo Nicho
+                             The Passion According to G.H.                        Catálogo Nicho
+                                                 Macunaima Acervo Cinema Brocado, Catálogo Nicho
 
 Total de correspondências: 27
 ```
