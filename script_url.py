@@ -157,7 +157,7 @@ def comparar_listas(watchlist_url, urls):
 
     # Cruzamento
     matches = pd.merge(df_watchlist[['Name', 'match_name']], df_external_grouped, on='match_name', suffixes=('_sua', '_lista'))
-    matches = matches.rename(columns={'Source': 'Em quais listas'})
+    matches = matches.rename(columns={'Name_sua': 'Watchlist', 'Source': 'Em quais listas'})
     
     return matches
 
@@ -177,10 +177,20 @@ try:
 
     if not resultados.empty:
         print("\n=== Filmes encontrados em comum ===")
-        colunas_exibir = ['Watchlist', 'Em quais acervos']
+        colunas_exibir = ['Watchlist', 'Em quais listas']
         
-        print(resultados[colunas_exibir].drop_duplicates().to_string(index=False))
-        print(f"\nTotal de correspondências: {len(resultados.drop_duplicates(subset=['match_name']))}")
+        output = resultados[colunas_exibir].drop_duplicates().to_string(index=False)
+        total = len(resultados.drop_duplicates(subset=['match_name']))
+        
+        print(output)
+        print(f"\nTotal de correspondências: {total}")
+        
+        # Salvar resultado em arquivo .txt
+        with open('filmes-para-ver.txt', 'w', encoding='utf-8') as f:
+            f.write("=== Filmes da sua watchlist disponíveis nos acervos ===\n\n")
+            f.write(output)
+            f.write(f"\n\nTotal de correspondências: {total}")
+        print("\nResultado salvo em 'filmes-para-ver.txt'")
     else:
         print("\nNenhum filme em comum foi encontrado.")
 except Exception as e:
