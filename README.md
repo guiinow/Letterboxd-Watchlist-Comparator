@@ -6,9 +6,7 @@ Compara sua watchlist do Letterboxd com listas públicas para encontrar filmes e
 
 - Identifica filmes em comum entre sua watchlist e listas públicas do Letterboxd
 - Compara sua watchlist com o catálogo da MUBI no Brasil via JustWatch
-- Dois modos de leitura da watchlist:
-  - **Via CSV**: usando arquivo exportado do Letterboxd
-  - **Via URL**: lendo diretamente da sua página de watchlist
+- Lê a watchlist atual diretamente pela URL do Letterboxd
 
 ## Requisitos
 
@@ -32,22 +30,7 @@ pip install -r requirements.txt
 
 ## Como usar
 
-### Opção 1: Leitura via CSV (`script_csv.py`)
-
-1. Exporte sua watchlist do Letterboxd:
-   - Acesse sua watchlist (ex: `https://letterboxd.com/seu_usuario/watchlist/`)
-   - Clique em "Export watchlist" para baixar o CSV
-
-2. Edite `script_csv.py`:
-   - Atualize `meu_arquivo` com o nome do seu CSV
-   - Adicione as URLs das listas em `urls_para_analisar`
-
-3. Execute:
-```bash
-python script_csv.py
-```
-
-### Opção 2: Leitura via URL (`script_url.py`)
+### Comparação com listas do Letterboxd (`script_url.py`)
 
 1. Edite `script_url.py`:
    - Atualize `minha_watchlist` com a URL da sua watchlist (ex: `https://letterboxd.com/seu_usuario/watchlist/`)
@@ -58,17 +41,17 @@ python script_csv.py
 python script_url.py
 ```
 
-### Comparação com a MUBI via JustWatch
+### Comparação atual com a MUBI
 
-O módulo `justwatch_mubi.py` usa o CSV exportado do Letterboxd e consulta o catálogo da MUBI no Brasil (`country='BR'`). Por padrão, ele lê o CSV `watchlist-guiinow-2026-02-02-22-14-utc.csv` e gera `filmes-mubi.csv`.
+O comando abaixo busca diretamente sua watchlist atual do Letterboxd e consulta o catálogo da MUBI no Brasil (`country='BR'`). Nenhum CSV é necessário.
 
 ```bash
 python justwatch_mubi.py
-# Ou informe outro CSV:
-python justwatch_mubi.py caminho/para/watchlist.csv
+# Ou informe outra URL de watchlist:
+python justwatch_mubi.py https://letterboxd.com/outro_usuario/watchlist/
 ```
 
-O catálogo é salvo em `cache/mubi_catalog.json` e reutilizado por 7 dias. A comparação usa título normalizado, variantes em português/inglês e ano de lançamento. O script usa o endpoint GraphQL atual do JustWatch (`https://apis.justwatch.com/graphql`) com o filtro MUBI do Brasil. A lib `JustWatch` e a página pública do provedor ficam como fallbacks para compatibilidade. Se o JustWatch estiver indisponível, o script tenta usar um cache antigo e não interrompe o processo por erro de rede.
+O catálogo da MUBI é salvo em `cache/mubi_catalog.json` e reutilizado por 7 dias. O resultado fica em `filmes-mubi.csv`.
 
 ## Exemplo de saída
 

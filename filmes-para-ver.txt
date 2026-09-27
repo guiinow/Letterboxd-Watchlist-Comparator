@@ -1,25 +1,30 @@
 === Filmes da sua watchlist disponíveis nos acervos ===
 
-                                                 Watchlist       Em quais listas
-                                    Nos Embalos de Ipanema Acervo Cinema Brocado
-                                                    Pixote Acervo Cinema Brocado
-                                             Rio Babilonia Acervo Cinema Brocado
-                                               Fake Blonde Acervo Cinema Brocado
-                           Red Was the Color of Their Lips Acervo Cinema Brocado
-                                         Matthias & Maxime Acervo Cinema Brocado
-                                        A Wolf at the Door Acervo Cinema Brocado
-                                          Carnival Is Over Acervo Cinema Brocado
-                                                   Nowhere Acervo Cinema Brocado
-                                          Paris Is Burning Acervo Cinema Brocado
-                                      Copacabana Mon Amour Acervo Cinema Brocado
-                                                  Socrates Acervo Cinema Brocado
-                                              Summer of 85 Acervo Cinema Brocado
-                                                 Carandiru Acervo Cinema Brocado
-                                      The Empire of Desire Acervo Cinema Brocado
-                                        Neighboring Sounds Acervo Cinema Brocado
-                                    Black God, White Devil Acervo Cinema Brocado
-                                                 Macunaima Acervo Cinema Brocado
-I Travel Because I Have to, I Come Back Because I Love You Acervo Cinema Brocado
+                                                 Watchlist      Em quais acervos
                                                  Fireworks Acervo Cinema Brocado
+                                              Mango Yellow Acervo Cinema Brocado
+I Travel Because I Have to, I Come Back Because I Love You Acervo Cinema Brocado
+                                            The Living End Acervo Cinema Brocado
+                                                 Macunaima Acervo Cinema Brocado
+                                          Bittersweet Rain Acervo Cinema Brocado
+                                    Black God, White Devil Acervo Cinema Brocado
+                                        Neighboring Sounds Acervo Cinema Brocado
+                                      The Empire of Desire Acervo Cinema Brocado
+                                                 Carandiru Acervo Cinema Brocado
+                                              Summer of 85 Acervo Cinema Brocado
+                                      Copacabana Mon Amour Acervo Cinema Brocado
+                                    Ó Paí, Ó: Look at This Acervo Cinema Brocado
+                                                The Prince Acervo Cinema Brocado
+                                          Paris Is Burning Acervo Cinema Brocado
+                                                   Nowhere Acervo Cinema Brocado
+                                          Carnival Is Over Acervo Cinema Brocado
+                                        A Wolf at the Door Acervo Cinema Brocado
+                                                   Maurice Acervo Cinema Brocado
+                                         Matthias & Maxime Acervo Cinema Brocado
+                           Red Was the Color of Their Lips Acervo Cinema Brocado
+                                      My Name Ain't Johnny Acervo Cinema Brocado
+                                               Fake Blonde Acervo Cinema Brocado
+                                             Rio Babilonia Acervo Cinema Brocado
+                                          The Conspirators Acervo Cinema Brocado
 
-Total de correspondências: 20
+Total de correspondências: 25

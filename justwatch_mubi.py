@@ -8,6 +8,8 @@ from typing import Any
 
 import pandas as pd
 import requests
+import cloudscraper
+from bs4 import BeautifulSoup
 from justwatch import JustWatch
 
 
@@ -17,6 +19,7 @@ CACHE_PATH = Path("cache/mubi_catalog.json")
 OUTPUT_PATH = Path("filmes-mubi.csv")
 CACHE_MAX_AGE = timedelta(days=7)
 PAGE_SIZE = 100
+WATCHLIST_URL = "https://letterboxd.com/guiinow/watchlist/"
 PROVIDER_URL = "https://br.justwatch.com/br/provedor/mubi"
 GRAPHQL_URL = "https://apis.justwatch.com/graphql"
 GRAPHQL_HEADERS = {
@@ -80,6 +83,41 @@ def normalize_text(value: Any) -> str:
     text = text.lower()
     text = re.sub(r"[^a-z0-9]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def fetch_letterboxd_watchlist(watchlist_url: str = WATCHLIST_URL) -> pd.DataFrame:
+    """Fetch the current Letterboxd watchlist without using an export file."""
+    scraper = cloudscraper.create_scraper(
+        browser={"browser": "chrome", "platform": "windows", "desktop": True}
+    )
+    movies: list[dict[str, str]] = []
+    page = 1
+
+    while True:
+        url = f"{watchlist_url.rstrip('/')}/page/{page}/"
+        response = scraper.get(url, timeout=30)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        page_movies = []
+
+        for poster in soup.select("div.film-poster"):
+            image = poster.find("img")
+            title = image.get("alt", "").strip() if image else ""
+            if title:
+                page_movies.append({"Name": title})
+
+        if not page_movies:
+            break
+
+        movies.extend(page_movies)
+        if not soup.find("a", class_="next"):
+            break
+        page += 1
+
+    if not movies:
+        raise ValueError("nenhum filme foi encontrado na watchlist do Letterboxd")
+
+    return pd.DataFrame(movies).drop_duplicates(subset=["Name"])
 
 
 def cache_is_fresh(cache_path: Path = CACHE_PATH) -> bool:
@@ -299,16 +337,12 @@ def load_mubi_catalog(cache_path: Path = CACHE_PATH) -> list[dict[str, Any]]:
 
 
 def compare_watchlist_with_mubi(
-    watchlist_path: str | Path,
+    watchlist_url: str = WATCHLIST_URL,
     output_path: str | Path = OUTPUT_PATH,
     cache_path: str | Path = CACHE_PATH,
 ) -> pd.DataFrame:
-    """Return and save watchlist films currently listed on MUBI in Brazil."""
-    watchlist = pd.read_csv(watchlist_path, encoding="utf-8-sig")
-    required_columns = {"Name", "Year"}
-    missing_columns = required_columns - set(watchlist.columns)
-    if missing_columns:
-        raise ValueError(f"Colunas ausentes no CSV: {', '.join(sorted(missing_columns))}")
+    """Compare the current online Letterboxd watchlist with MUBI in Brazil."""
+    watchlist = fetch_letterboxd_watchlist(watchlist_url)
 
     catalog = load_mubi_catalog(Path(cache_path))
     catalog_df = pd.DataFrame(catalog)
@@ -317,17 +351,15 @@ def compare_watchlist_with_mubi(
     else:
         watchlist = watchlist.copy()
         watchlist["match_title"] = watchlist["Name"].map(normalize_text)
-        watchlist["match_year"] = pd.to_numeric(watchlist["Year"], errors="coerce")
         catalog_df["match_title"] = catalog_df["title"].map(normalize_text)
         if "original_title" not in catalog_df.columns:
             catalog_df["original_title"] = None
         catalog_df["match_original_title"] = catalog_df["original_title"].map(normalize_text)
-        catalog_df["match_year"] = pd.to_numeric(catalog_df["year"], errors="coerce")
 
         catalog_titles = pd.concat(
             [
-                catalog_df[["id", "title", "year", "match_title", "match_year"]],
-                catalog_df[["id", "original_title", "year", "match_original_title", "match_year"]]
+                catalog_df[["id", "title", "year", "match_title"]],
+                catalog_df[["id", "original_title", "year", "match_original_title"]]
                 .rename(columns={"original_title": "title", "match_original_title": "match_title"}),
             ],
             ignore_index=True,
@@ -335,7 +367,7 @@ def compare_watchlist_with_mubi(
 
         matches = watchlist.merge(
             catalog_titles,
-            on=["match_title", "match_year"],
+            on="match_title",
             how="inner",
         )
         matches = matches.rename(
@@ -344,8 +376,8 @@ def compare_watchlist_with_mubi(
                 "title": "MUBI",
                 "id": "JustWatch ID",
             }
-        )[["Watchlist", "match_year", "MUBI", "JustWatch ID"]]
-        matches = matches.rename(columns={"match_year": "Year"}).drop_duplicates()
+        )[["Watchlist", "year", "MUBI", "JustWatch ID"]]
+        matches = matches.rename(columns={"year": "Year"}).drop_duplicates()
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -354,10 +386,8 @@ def compare_watchlist_with_mubi(
 
 
 def main() -> None:
-    watchlist_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
-        "watchlist-guiinow-2026-02-02-22-14-utc.csv"
-    )
-    matches = compare_watchlist_with_mubi(watchlist_path)
+    watchlist_url = sys.argv[1] if len(sys.argv) > 1 else WATCHLIST_URL
+    matches = compare_watchlist_with_mubi(watchlist_url)
     print(f"Filmes da watchlist encontrados na MUBI: {len(matches)}")
     print(f"Resultado salvo em: {OUTPUT_PATH}")
 
