@@ -1,0 +1,4 @@
+beautifulsoup4
+cloudscraper
+JustWatch==0.5.1
+pandas
